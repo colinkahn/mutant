@@ -1,5 +1,7 @@
 (ns mutant.mutations
-  (:require [rewrite-clj.zip :as z]))
+  (:require [rewrite-clj.zip :as z]
+            [clojure.pprint :refer [pprint]]
+            [clojure.string :as str]))
 
 (defn- swapping-mutation [from to]
   (fn [node]
@@ -37,6 +39,17 @@
         :foo [(z/replace node :bar)]
         [(z/replace node :foo)]))))
 
+(defn regex? [r]
+  (instance? java.util.regex.Pattern r))
+
+(defn- random-re-pattern [node]
+  (let [sexpr (z/sexpr node)]
+    (when (seq? sexpr)
+      (let [[type chars & _] sexpr]
+        (when (and (= 're-pattern type)
+                   (string? chars))
+          [(z/replace node #"fake-regex")])))))
+
 (defn- rm-args [node]
   (let [sexpr (z/sexpr node)]
     (if (seq? sexpr)
@@ -71,6 +84,7 @@
    empty?-seq
    for->doseq
    random-keyword
+   random-re-pattern
    not-boolean])
 
 (defn mutate [zipper]
