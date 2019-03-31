@@ -3,18 +3,19 @@
             [jansi-clj [core :as jansi] auto]
             [clj-diffmatchpatch :as dmp]))
 
-(defn run [source-directory test-directory test-fn]
-  (let [dep-graph (mi/dependency-graph [source-directory test-directory])]
-    (->> (mi/namespaces source-directory)
+(defn run [{:keys [:src-paths :test-fn :git-since]}]
+  (let [dep-graph (mi/dependency-graph src-paths)
+        git-diff  (mi/make-git-diff git-since)]
+    (->> (mapcat #(mi/namespaces %) src-paths)
          (mapcat (fn [[file ns]]
-                   (mi/run-ns ns (mi/forms file) dep-graph test-fn)))
+                   (mi/run-ns ns (mi/forms git-diff file) dep-graph test-fn)))
          (reductions (fn [{:keys [total survivors]} {:keys [survivor]}]
                        {:survivors (if survivor
                                      (cons survivor survivors)
                                      survivors)
-                        :total (inc total)})
+                        :total     (inc total)})
                      {:survivors ()
-                      :total 0})
+                      :total     0})
          (rest))))
 
 (defn pprint [{:keys [survivors total]}]

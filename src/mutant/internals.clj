@@ -1,11 +1,14 @@
 (ns mutant.internals
   (:require [rewrite-clj.zip :as z]
             [mutant.mutations :refer [mutate]]
+            [clojure.java.io :as jio]
+            [clojure.java.shell :as shell]
             [clojure.tools.namespace
              [find :as find]
              [file :as file]
              [parse :as parse]
-             [dependency :as dep]]))
+             [dependency :as dep]]
+            [clojure.string :as str]))
 
 (defn- paths-in-zipper [zipper]
   (let [directions [z/down z/right]
@@ -46,13 +49,70 @@
                            deps))
                  (dep/graph)))))
 
+
+
+(defn candidate-files [git-since]
+  (let [files (->> (shell/sh "git" "diff" "--name-only" "--relative" git-since)
+                   :out
+                   (str/split-lines)
+                   (remove (partial str/blank?))
+                   (filter #(.exists (jio/file %))))]
+    files))
+
+
+(defn candidate-lines [files git-since]
+  (into {}
+        (map (fn [file]
+               (let [parse (fn [s]
+                             (->> (re-find #"@@ -(\d+),?(\d*)\s+\+(\d+),?(\d*) @@" s)
+                                  (rest)
+                                  (map #(or (and (str/blank? %) 0)
+                                            (Integer/parseInt %)))
+                                  (zipmap [:old-line :old-count :new-line :new-count])))
+                     outputs (->> (shell/sh "git" "diff" "--unified=0" "--patch" git-since file)
+                                  :out
+                                  (str/split-lines)
+                                  (filter #(str/starts-with? % "@@ "))
+                                  (map parse)
+                                  (mapcat #(vector [(:old-line %) (+ (:old-line %) (:old-count %))]
+                                                   [(:new-line %) (+ (:new-line %) (:new-count %))]))
+                                  (vec))]
+                 {file outputs}))
+             files)))
+
+
+(defn make-git-diff [git-since]
+  (when git-since
+    (candidate-lines (candidate-files git-since) git-since)))
+
+
+(defn count-lines [file]
+  (with-open [rdr (jio/reader file)]
+    (-> rdr line-seq count)))
+
+
+(defn allow-candidate? [git-diff file node]
+  (or (empty? git-diff)
+      (let [touches? (fn [[def-start def-stop] [diff-start diff-stop]]
+                       (or (<= def-start diff-start def-stop)
+                           (<= def-start diff-stop def-stop)
+                           (<= diff-start def-start diff-stop)))
+            start    (-> node (z/position) first)
+            stop     (or (and (-> node (z/right))
+                              (-> node (z/right) (z/position) first))
+                         (count-lines file))]
+        (boolean (some #(touches? [start stop] %)
+                       (get git-diff (str (.toPath file))))))))
+
+
 (defn forms
   "Return a collection of zippers for top-level sexprs found in a given file."
-  [file]
+  [git-diff file]
   (->> (z/of-file file {:track-position? true})
        (iterate z/right)
        (remove (comp #{'ns} z/sexpr z/down))
-       (take-while boolean)))
+       (take-while boolean)
+       (filter (partial allow-candidate? git-diff file))))
 
 (defn- dependants [graph ns]
   (letfn [(rec [sym]

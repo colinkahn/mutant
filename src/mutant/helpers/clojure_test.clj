@@ -11,7 +11,10 @@
   "Invokes clojure.test/run-all-tests with an optional regex filtering test
   namespaces. clojure.test's is suppressed. Returns true iff all tests passed."
   ([]
-   (test-fn #".*"))
-  ([regex]
-   (let [{:keys [fail error]} (silently #(clojure.test/run-all-tests regex))]
+   (test-fn {}))
+  ([{:keys [:regex :silent?]
+     :or   {regex   #".*"
+            silent? true}}]
+   (let [wrapper              (if silent? silently #(%))
+         {:keys [fail error]} (wrapper #(clojure.test/run-all-tests regex))]
      (zero? (+ fail error)))))
