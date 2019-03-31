@@ -1,8 +1,9 @@
 (ns example.colls
   (:require [clojure.string :as str]))
 
+
 (defn all? [xs]
-  (reduce #(and %1 %2) (for [x xs] (boolean x))))
+  (reduce #(and %1 %2) (for [x xs] x)))
 
 
 (defn naive-transliterate [input]
