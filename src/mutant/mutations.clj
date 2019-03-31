@@ -1,70 +1,92 @@
 (ns mutant.mutations
-  (:require [rewrite-clj.zip :as z]
-            [clojure.pprint :refer [pprint]]
-            [clojure.string :as str]))
+  (:require [rewrite-clj.zip :as z]))
 
-(defn- swapping-mutation [from to]
-  (fn [node]
-    (condp = (z/sexpr node)
-      to   [(z/replace node from)]
-      from [(z/replace node to)]
-      nil)))
 
-(def ^:private and-or
-  (swapping-mutation 'and 'or))
+(def qualified-sym 'mutant-qualified-sym)
+(def other-qualified-sym 'mutant-other-qualified-sym)
 
-(def ^:private not-boolean
-  (swapping-mutation 'boolean 'not))
 
-(def ^:private empty?-seq
-  (swapping-mutation 'empty? 'seq))
+(def illogical-swap-mutations
+  {'and      '[or]
+   'or       '[and]
+   '>        '[>= = <]
+   '<        '[<= = >]
+   '>=       '[> = <]
+   '<=       '[< = >]
+   '=        '[not=]
+   'not=     '[=]
+   'boolean  '[not]
+   'not      '[boolean]
+   'empty?   '[seq]
+   'seq      '[empty?]
+   'for      '[doseq]
+   'if       '[if-not when when-not]
+   'if-not   '[if when when-not]
+   'when     '[if-not when-not]
+   'when-not '[if when]})
 
-(def ^:private gt-gte
-  (swapping-mutation '<= '<))
 
-(def ^:private lt-lte
-  (swapping-mutation '>= '>))
+(defn illogical-swap [node]
+  (when-let [ops (get illogical-swap-mutations (z/sexpr node))]
+    (mapv #(z/replace node %) ops)))
 
-(def ^:private eq-noteq
-  (swapping-mutation '= 'not=))
 
-(defn- for->doseq [node]
-  (if (= 'for (z/sexpr node))
-    [(z/replace node 'doseq)]))
+(defn is-top-level-symbol?
+  "A symbol that most likely represents a top-level name,
+  e.g. `defn <..>`, `def <..>` or similar. Because of how
+  *ns* reloading works, if we change the name, the old one
+  will still exist and hence the mutation will live.
+  Just going to skip these for now."
+  [node]
+  (and (-> node z/sexpr symbol?)
+       (some? (-> node z/left))
+       (some? (-> node z/up z/up))
+       (nil? (-> node z/left z/left))
+       (nil? (-> node z/up z/up z/up))))
 
-(defn- random-keyword [node]
+
+(defn random-rename [node]
   (let [sexpr (z/sexpr node)]
-    (if (keyword? sexpr)
+    (cond
+      (is-top-level-symbol? node)
+      nil
+
+      (qualified-keyword? sexpr)
       (case sexpr
-        :foo [(z/replace node :bar)]
-        [(z/replace node :foo)]))))
+        ::mutant-ns-kw [(z/replace node ::other-mutant-ns-kw)]
+        [(z/replace node ::mutant-ns-kw)])
 
-(defn regex? [r]
-  (instance? java.util.regex.Pattern r))
+      (keyword? sexpr)
+      (case sexpr
+        :mutant-kw [(z/replace node :other-mutant-kw)]
+        [(z/replace node :mutant-kw)])
 
-(defn- random-re-pattern [node]
+      (qualified-symbol? sexpr)
+      (case sexpr
+        `qualified-sym [(z/replace node `other-qualified-sym)]
+        [(z/replace node `qualified-sym)])
+
+      (symbol? sexpr)
+      (case sexpr
+        'mutant-sym [(z/replace node 'other-mutant-sym)]
+        [(z/replace node 'mutant-sym)]))))
+
+
+(defn random-re-pattern [node]
   (let [sexpr (z/sexpr node)]
     (when (seq? sexpr)
       (let [[type chars & _] sexpr]
         (when (and (= 're-pattern type)
                    (string? chars))
-          [(z/replace node #"fake-regex")])))))
+          (if (= chars "mutant-regex")
+            [(z/replace node #"other-mutant-regex")]
+            [(z/replace node #"mutant-regex")]))))))
 
-(defn- rm-args [node]
-  (let [sexpr (z/sexpr node)]
-    (if (seq? sexpr)
-      (let [[defn name args & more] sexpr]
-        (if (and (#{'defn 'defn-} defn)
-                 (vector? args))
-          (for [arg args]
-            (-> node z/down z/right z/right
-                (z/edit (partial filterv (complement #{arg})))
-                (z/up))))))))
 
-(defn- rm-fn-body [node]
+(defn rm-fn-body [node]
   (let [sexpr (z/sexpr node)]
-    (if (seq? sexpr)
-      (let [[defn name args & more] sexpr]
+    (when (seq? sexpr)
+      (let [[defn _name args & _more] sexpr]
         (if (and (#{'defn 'defn-} defn)
                  (vector? args))
           (for [idx (drop 3 (range (count sexpr)))]
@@ -74,24 +96,35 @@
                 z/up
                 z/up)))))))
 
-(def ^:private mutations
-  [and-or
-   gt-gte
-   lt-lte
-   rm-args
-   rm-fn-body
-   eq-noteq
-   empty?-seq
-   for->doseq
-   random-keyword
+
+(defn rm-args [node]
+  (let [sexpr (z/sexpr node)]
+    (when (seq? sexpr)
+      (let [[defn _name args & _more] sexpr]
+        (if (and (#{'defn 'defn-} defn)
+                 (vector? args))
+          (mapv (fn [arg]
+                  (-> node z/down z/right z/right
+                      (z/edit (partial filterv (complement #{arg})))
+                      (z/up)))
+                args))))))
+
+
+(def mutations
+  [illogical-swap
+   random-rename
    random-re-pattern
-   not-boolean])
+   rm-fn-body
+   rm-args])
+
+
+(defn mutate-with [m zipper]
+  (try
+    (m zipper)
+    (catch UnsupportedOperationException ex
+      nil)))
 
 (defn mutate [zipper]
   (->> mutations
-       (mapcat (fn [m]
-                 (try
-                   (m zipper)
-                   (catch UnsupportedOperationException ex
-                     nil))))
+       (mapcat #(mutate-with % zipper))
        (remove nil?)))
