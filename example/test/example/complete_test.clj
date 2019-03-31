@@ -15,9 +15,9 @@
   (is (not (nums/stricly-pos? 0)))
 
   (is (nums/non-neg? 0))
+  (is (nums/non-neg? 1))
   (is (not (nums/non-neg? -1)))
 
-
   (is (= "acelnosz" (colls/naive-transliterate "ąćęłńóśż")))
-
+  (is (= nil (colls/naive-transliterate " ")))
   )
