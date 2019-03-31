@@ -51,10 +51,18 @@
   (check sut/random-rename :mutant-kw [:other-mutant-kw])
   (check sut/random-rename ::foo [::sut/mutant-ns-kw])
   (check sut/random-rename ::sut/mutant-ns-kw [::sut/other-mutant-ns-kw])
-  (check sut/random-rename 'foo ['mutant-sym])
-  (check sut/random-rename 'mutant-sym ['other-mutant-sym])
-  (check sut/random-rename `foo [`sut/qualified-sym])
-  (check sut/random-rename `sut/qualified-sym [`sut/other-qualified-sym]))
+  (check sut/random-rename 'foo ['mutant-sym
+                                 `sut/ok-sentinel
+                                 `sut/not-ok-sentinel])
+  (check sut/random-rename 'mutant-sym ['other-mutant-sym
+                                        `sut/ok-sentinel
+                                        `sut/not-ok-sentinel])
+  (check sut/random-rename `foo [`sut/mutant-sym
+                                 `sut/ok-sentinel
+                                 `sut/not-ok-sentinel])
+  (check sut/random-rename `sut/mutant-sym [`sut/other-mutant-sym
+                                            `sut/ok-sentinel
+                                            `sut/not-ok-sentinel]))
 
 
 (deftest t-random-re-pattern

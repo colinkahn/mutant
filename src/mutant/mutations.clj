@@ -1,9 +1,12 @@
 (ns mutant.mutations
-  (:require [rewrite-clj.zip :as z]))
+  (:require [rewrite-clj.zip :as z]
+            [clojure.spec.alpha :as s]))
 
 
-(def qualified-sym 'mutant-qualified-sym)
-(def other-qualified-sym 'mutant-other-qualified-sym)
+(def ok-sentinel identity)
+
+(defn not-ok-sentinel [& args]
+  (assert nil "Mutant qualified-sym sentinel"))
 
 
 (def illogical-swap-mutations
@@ -45,10 +48,23 @@
        (nil? (-> node z/up z/up z/up))))
 
 
+(defn is-spec-keyword?
+  "Similarly to `is-top-level-symbol?`, clojure.specs are
+  in a global registry and will not correctly be purged
+  during a rename operation."
+  [node]
+  (and (-> node z/sexpr qualified-keyword?)
+       (some? (-> node z/left))
+       (= 's/def (-> node z/left z/sexpr))))
+
+
 (defn random-rename [node]
   (let [sexpr (z/sexpr node)]
     (cond
       (is-top-level-symbol? node)
+      nil
+
+      (is-spec-keyword? node)
       nil
 
       (qualified-keyword? sexpr)
@@ -63,13 +79,21 @@
 
       (qualified-symbol? sexpr)
       (case sexpr
-        `qualified-sym [(z/replace node `other-qualified-sym)]
-        [(z/replace node `qualified-sym)])
+        `mutant-sym [(z/replace node `other-mutant-sym)
+                     (z/replace node `ok-sentinel)
+                     (z/replace node `not-ok-sentinel)]
+        [(z/replace node `mutant-sym)
+         (z/replace node `ok-sentinel)
+         (z/replace node `not-ok-sentinel)])
 
       (symbol? sexpr)
       (case sexpr
-        'mutant-sym [(z/replace node 'other-mutant-sym)]
-        [(z/replace node 'mutant-sym)]))))
+        'mutant-sym [(z/replace node 'other-mutant-sym)
+                     (z/replace node `ok-sentinel)
+                     (z/replace node `not-ok-sentinel)]
+        [(z/replace node 'mutant-sym)
+         (z/replace node `ok-sentinel)
+         (z/replace node `not-ok-sentinel)]))))
 
 
 (defn random-re-pattern [node]
