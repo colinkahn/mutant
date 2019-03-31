@@ -7,7 +7,7 @@
 (deftest t-run
   (is (= (for [index (range 1 15)]
            {:survivors [], :total index})
-         (m/run {:src-paths ["test/mutant/core_test/src"]
+         (m/run {:src-paths ["old-test/mutant/core_test/src"]
                  :test-fn   #(test-fn {:regex #"mutant.core-test.test.test"})})))
   (is (= {:survivors [{:original "(defn non-neg? [x]\n  (<= 0 x))"
                        :mutant   "(defn non-neg? [x]\n  (< 0 x))"
@@ -20,5 +20,5 @@
                        :ns       'mutant.core-test.src.colls}]
 
           :total 14}
-         (last (m/run {:src-paths ["test/mutant/core_test/src"]
+         (last (m/run {:src-paths ["old-test/mutant/core_test/src"]
                        :test-fn   #(test-fn {:regex #"mutant.core-test.test.incomplete-test"})})))))

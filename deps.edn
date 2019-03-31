@@ -5,7 +5,10 @@
            org.clojure/tools.deps.alpha {:mvn/version "0.6.496"}
            jansi-clj                    {:mvn/version "0.1.1" :exclusions [org.clojure/clojure]}
            rewrite-clj                  {:mvn/version "0.6.1"}}
- :aliases {:test {:extra-paths ["test"]
-                  :extra-deps  {com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
-                                                           :sha     "209b64504cb3bd3b99ecfec7937b358a879f55c1"}
-                                lambdaisland/kaocha       {:mvn/version "0.0-413"}}}}}
+ :aliases {:old-test {:extra-paths ["old-test"]
+                      :extra-deps  {com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
+                                                               :sha     "209b64504cb3bd3b99ecfec7937b358a879f55c1"}}}
+           :test     {:extra-paths ["test"]
+                      :extra-deps  {com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
+                                                               :sha     "209b64504cb3bd3b99ecfec7937b358a879f55c1"}
+                                    lambdaisland/kaocha       {:mvn/version "0.0-413"}}}}}
