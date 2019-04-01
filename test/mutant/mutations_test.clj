@@ -40,7 +40,9 @@
                 boolean not
                 empty? seq
                 for
-                if if-not when when-not])
+                if if-not when when-not
+                true false true? false? nil? some?
+                + - * /])
          (set (keys sut/illogical-swap-mutations))))
   (doseq [[k vs] sut/illogical-swap-mutations]
     (check sut/illogical-swap k vs)))
@@ -63,6 +65,18 @@
   (check sut/random-rename `sut/mutant-sym [`sut/other-mutant-sym
                                             `sut/ok-sentinel
                                             `sut/not-ok-sentinel]))
+
+(deftest t-swap-values
+  (check sut/swap-values 42 [-42 0])
+  (check sut/swap-values -42 [42 0])
+  (check sut/swap-values 0 [1 -1]))
+
+
+(deftest t-replace-with-nil
+  (check sut/replace-with-nil :foo [nil])
+  (check sut/replace-with-nil ::foo [nil])
+  (check sut/replace-with-nil 'foo [nil])
+  (check sut/replace-with-nil `foo [nil]))
 
 
 (deftest t-random-re-pattern

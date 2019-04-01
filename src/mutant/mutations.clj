@@ -1,6 +1,5 @@
 (ns mutant.mutations
-  (:require [rewrite-clj.zip :as z]
-            [clojure.spec.alpha :as s]))
+  (:require [rewrite-clj.zip :as z]))
 
 
 (def ok-sentinel identity)
@@ -26,7 +25,17 @@
    'if       '[if-not when when-not]
    'if-not   '[if when when-not]
    'when     '[if-not when-not]
-   'when-not '[if when]})
+   'when-not '[if when]
+   '+        '[- * /]
+   '-        '[+ * /]
+   '/        '[+ - *]
+   '*        '[+ - /]
+   'true     '[false nil]
+   'false    '[true]
+   'true?    '[false? nil?]
+   'false?   '[true? nil?]
+   'nil?     '[some?]
+   'some?    '[nil?]})
 
 
 (defn illogical-swap [node]
@@ -96,6 +105,31 @@
          (z/replace node `not-ok-sentinel)]))))
 
 
+(defn swap-values [node]
+  (let [sexpr (z/sexpr node)]
+    (cond
+      (and (number? sexpr) (zero? sexpr))
+      [(z/replace node -1)
+       (z/replace node 1)]
+
+      (number? sexpr)
+      [(z/replace node (- sexpr))
+       (z/replace node 0)])))
+
+
+(defn replace-with-nil [node]
+  (let [sexpr (z/sexpr node)]
+    (cond
+      (is-top-level-symbol? node)
+      nil
+
+      (is-spec-keyword? node)
+      nil
+
+      ((some-fn symbol? keyword?) sexpr)
+      [(z/replace node nil)])))
+
+
 (defn random-re-pattern [node]
   (let [sexpr (z/sexpr node)]
     (when (seq? sexpr)
@@ -136,6 +170,8 @@
 
 (def mutations
   [illogical-swap
+   swap-values
+   replace-with-nil
    random-rename
    random-re-pattern
    rm-fn-body
