@@ -23,4 +23,13 @@
   (is (= nil (colls/naive-transliterate " ")))
 
   (is (s/valid? ::nums/integer 42))
-  (is (not (s/valid? ::nums/integer "42"))))
+  (is (not (s/valid? ::nums/integer "42")))
+
+  (let [state (atom {:counter 0})]
+    (is (= {:counter 1} (colls/mutate-swap state)))
+    (is (= {:counter 2} (colls/mutate-swap state))))
+
+  (let [state (atom 0)]
+    (is (= 42 (colls/mutate-reset state)))
+    (is (= 42 @state)))
+  )
