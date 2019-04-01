@@ -79,6 +79,18 @@
   (check sut/replace-with-nil `foo [nil]))
 
 
+(deftest t-noop-swap!
+  (check sut/noop-swap!
+         '(swap! s update :counter inc)
+         '[(update (clojure.core/deref s) :counter inc)]))
+
+
+(deftest t-noop-reset!
+  (check sut/noop-reset!
+         '(reset! s 42)
+         '[42]))
+
+
 (deftest t-random-re-pattern
   (letfn [(check [sexpr expected-mutations]
             (let [muts (mutations sut/random-re-pattern sexpr)]

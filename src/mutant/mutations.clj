@@ -168,6 +168,22 @@
                 args))))))
 
 
+(defn noop-swap! [node]
+  (let [sexpr (z/sexpr node)]
+    (when (seq? sexpr)
+      (let [[sym ref f & more] sexpr]
+        (when (and (= 'swap! sym) ref f)
+          [(z/replace node `(~f (deref ~ref) ~@more))])))))
+
+
+(defn noop-reset! [node]
+  (let [sexpr (z/sexpr node)]
+    (when (seq? sexpr)
+      (let [[sym _ref val] sexpr]
+        (when (and (= 'reset! sym) ref val)
+          [(z/replace node val)])))))
+
+
 (def mutations
   [illogical-swap
    swap-values
@@ -175,7 +191,9 @@
    random-rename
    random-re-pattern
    rm-fn-body
-   rm-args])
+   rm-args
+   noop-swap!
+   noop-reset!])
 
 
 (defn mutate-with [m zipper]
