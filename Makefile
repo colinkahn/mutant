@@ -1,5 +1,7 @@
 .PHONY: test
 
+test-all: test ex-mutant
+
 ex-test:
 	cd example && \
 		clj -A:test -m cognitect.test-runner -d test

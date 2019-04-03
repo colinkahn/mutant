@@ -20,24 +20,29 @@
                       directions))]
     (cons [] (rec [z/down] (z/down zipper)))))
 
-(defn- mutants [zipper paths]
-  (->> (for [path paths]
-         (let [node (reduce (fn [node dir] (dir node)) zipper path)
-               rev-path (map {z/down z/up, z/right z/left} (reverse path))]
-           (remove nil?
-                   (for [mutant (mutate node)]
-                     (reduce (fn [node dir] (dir node)) mutant rev-path)))))
-       (apply concat)))
+
+(defn mutants [zipper paths]
+  (mapcat
+   (fn [path]
+     (let [node     (reduce (fn [node dir] (dir node)) zipper path)
+           rev-path (map {z/down z/up, z/right z/left} (reverse path))]
+       (remove nil?
+               (for [mutant (mutate node)]
+                 (reduce (fn [node dir] (dir node)) mutant rev-path)))))
+   paths))
+
 
 (defn- file [^String name]
   (java.io.File. name))
 
+
 (defn namespaces
   "Returns a map from files to namespaces in a given directory."
   [directory-name]
-  (->> (find/find-clojure-sources-in-dir (file directory-name))
-       (map (juxt identity (comp second file/read-file-ns-decl)))
-       (into {})))
+  (into {}
+        (map (juxt identity (comp second file/read-file-ns-decl)))
+        (find/find-clojure-sources-in-dir (file directory-name))))
+
 
 (defn dependency-graph [directory-names]
   (let [decls (find/find-ns-decls (map file directory-names))]
@@ -48,7 +53,6 @@
                            graph
                            deps))
                  (dep/graph)))))
-
 
 
 (defn candidate-files [git-since]
