@@ -28,7 +28,6 @@
 
 (defn check [op sexpr expected-mutations]
   (let [muts (mutations op sexpr)]
-    (is (seq muts) (str "No mutations: " (pr-str sexpr)))
     (is (= (set expected-mutations) muts))))
 
 
@@ -65,6 +64,17 @@
   (check sut/random-rename `sut/mutant-sym [`sut/other-mutant-sym
                                             `sut/ok-sentinel
                                             `sut/not-ok-sentinel]))
+
+(deftest t-ignore-symbols
+  (check sut/random-rename '_ [])
+  (check sut/random-rename `_ [])
+  (check sut/random-rename '_foo [])
+  (check sut/random-rename `_foo [])
+
+  (check sut/replace-with-nil '_ [])
+  (check sut/replace-with-nil `_ [])
+  (check sut/replace-with-nil '_foo [])
+  (check sut/replace-with-nil `_foo []))
 
 
 (deftest t-random-rename-def-names

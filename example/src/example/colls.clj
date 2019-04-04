@@ -10,7 +10,7 @@
   (swap! s update :counter inc))
 
 
-(defn mutate-reset [s]
+(defn mutate-reset [s & _val]
   (reset! s 42))
 
 

@@ -1,5 +1,6 @@
 (ns mutant.mutations
-  (:require [mutant.zip :as z]))
+  (:require [mutant.zip :as z]
+            [clojure.string :as str]))
 
 
 (def ok-sentinel identity)
@@ -75,16 +76,26 @@
        (= 's/def (-> node z/left z/sexpr))))
 
 
+(defn is-ignoreable-symbol?
+  "By convention, symbols named _ or starting with _
+  should be ignored, since they are solely for documentation
+  and will not influence the test results."
+  [node]
+  (and (-> node z/sexpr symbol?)
+       (str/starts-with? (-> node z/sexpr name) "_")))
+
+
+(defn ignore-node? [node]
+  ((some-fn is-top-level-symbol?
+            is-top-level-def?
+            is-spec-keyword?
+            is-ignoreable-symbol?)
+   node))
+
 (defn random-rename [node]
   (let [sexpr (z/sexpr node)]
     (cond
-      (is-top-level-symbol? node)
-      nil
-
-      (is-spec-keyword? node)
-      nil
-
-      (is-top-level-def? node)
+      (ignore-node? node)
       nil
 
       (qualified-keyword? sexpr)
@@ -131,13 +142,7 @@
 (defn replace-with-nil [node]
   (let [sexpr (z/sexpr node)]
     (cond
-      (is-top-level-symbol? node)
-      nil
-
-      (is-spec-keyword? node)
-      nil
-
-      (is-top-level-def? node)
+      (ignore-node? node)
       nil
 
       ((some-fn symbol? keyword?) sexpr)
