@@ -70,11 +70,21 @@
   (check sut/random-rename `_ [])
   (check sut/random-rename '_foo [])
   (check sut/random-rename `_foo [])
+  (check sut/random-rename '*foo* [])
+  (check sut/random-rename '*foo #{'mutant-sym
+                                   'mutant.mutations/not-ok-sentinel
+                                   'mutant.mutations/ok-sentinel})
+  (check sut/random-rename 'foo* #{'mutant-sym
+                                   'mutant.mutations/not-ok-sentinel
+                                   'mutant.mutations/ok-sentinel})
 
   (check sut/replace-with-nil '_ [])
   (check sut/replace-with-nil `_ [])
   (check sut/replace-with-nil '_foo [])
-  (check sut/replace-with-nil `_foo []))
+  (check sut/replace-with-nil `_foo [])
+  (check sut/replace-with-nil '*foo* [])
+  (check sut/replace-with-nil '*foo #{nil})
+  (check sut/replace-with-nil 'foo* #{nil}))
 
 
 (deftest t-random-rename-def-names

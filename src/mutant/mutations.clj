@@ -85,12 +85,24 @@
        (str/starts-with? (-> node z/sexpr name) "_")))
 
 
+(defn is-dynamic-symbol?
+  "By convention, symbols named *foo* are dynamic and global
+  in nature, often changing behavior in subtle ways that is
+  not easily tested. Let's just ignore for now."
+  [node]
+  (and (-> node z/sexpr symbol?)
+       (str/starts-with? (-> node z/sexpr name) "*")
+       (str/ends-with? (-> node z/sexpr name) "*")))
+
+
 (defn ignore-node? [node]
   ((some-fn is-top-level-symbol?
             is-top-level-def?
             is-spec-keyword?
-            is-ignoreable-symbol?)
+            is-ignoreable-symbol?
+            is-dynamic-symbol?)
    node))
+
 
 (defn random-rename [node]
   (let [sexpr (z/sexpr node)]
