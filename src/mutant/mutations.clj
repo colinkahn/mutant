@@ -121,19 +121,31 @@
         [(z/replace node :mutant-kw)])
 
       (qualified-symbol? sexpr)
-      (case sexpr
-        `mutant-sym [(z/replace node `other-mutant-sym)
-                     (z/replace node `ok-sentinel)
-                     (z/replace node `not-ok-sentinel)]
+      (condp = sexpr
+        'clojure.core/identity
+        [(z/replace node `mutant-sym)
+         (z/replace node `not-ok-sentinel)]
+
+        `mutant-sym
+        [(z/replace node `other-mutant-sym)
+         (z/replace node `ok-sentinel)
+         (z/replace node `not-ok-sentinel)]
+
         [(z/replace node `mutant-sym)
          (z/replace node `ok-sentinel)
          (z/replace node `not-ok-sentinel)])
 
       (symbol? sexpr)
-      (case sexpr
-        'mutant-sym [(z/replace node 'other-mutant-sym)
-                     (z/replace node `ok-sentinel)
-                     (z/replace node `not-ok-sentinel)]
+      (condp = sexpr
+        'identity
+        [(z/replace node 'mutant-sym)
+         (z/replace node `not-ok-sentinel)]
+
+        'mutant-sym
+        [(z/replace node 'other-mutant-sym)
+         (z/replace node `ok-sentinel)
+         (z/replace node `not-ok-sentinel)]
+
         [(z/replace node 'mutant-sym)
          (z/replace node `ok-sentinel)
          (z/replace node `not-ok-sentinel)]))))

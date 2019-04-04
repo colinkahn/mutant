@@ -52,6 +52,7 @@
   (check sut/random-rename :mutant-kw [:other-mutant-kw])
   (check sut/random-rename ::foo [::sut/mutant-ns-kw])
   (check sut/random-rename ::sut/mutant-ns-kw [::sut/other-mutant-ns-kw])
+
   (check sut/random-rename 'foo ['mutant-sym
                                  `sut/ok-sentinel
                                  `sut/not-ok-sentinel])
@@ -63,7 +64,13 @@
                                  `sut/not-ok-sentinel])
   (check sut/random-rename `sut/mutant-sym [`sut/other-mutant-sym
                                             `sut/ok-sentinel
-                                            `sut/not-ok-sentinel]))
+                                            `sut/not-ok-sentinel])
+
+  (check sut/random-rename 'identity ['mutant-sym
+                                      `sut/not-ok-sentinel])
+  (check sut/random-rename `identity [`sut/mutant-sym
+                                      `sut/not-ok-sentinel]))
+
 
 (deftest t-ignore-symbols
   (check sut/random-rename '_ [])
