@@ -1,7 +1,7 @@
 (ns mutant.internals-test
   (:require [clojure.test :refer :all]
             [mutant.internals :as mi]
-            [rewrite-clj.zip :as z]
+            [mutant.zip :as z]
             clojure.tools.namespace.dependency))
 
 (deftest t-run-ns

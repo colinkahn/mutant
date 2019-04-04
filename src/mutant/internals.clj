@@ -1,5 +1,5 @@
 (ns mutant.internals
-  (:require [rewrite-clj.zip :as z]
+  (:require [mutant.zip :as z]
             [mutant.mutations :refer [mutate]]
             [clojure.java.io :as jio]
             [clojure.java.shell :as shell]

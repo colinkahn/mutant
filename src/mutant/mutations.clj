@@ -1,5 +1,5 @@
 (ns mutant.mutations
-  (:require [rewrite-clj.zip :as z]))
+  (:require [mutant.zip :as z]))
 
 
 (def ok-sentinel identity)

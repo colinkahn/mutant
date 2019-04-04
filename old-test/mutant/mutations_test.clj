@@ -1,6 +1,6 @@
 (ns mutant.mutations-test
   (:require [clojure.test :refer :all]
-            [rewrite-clj.zip :as z]
+            [mutant.zip :as z]
             [mutant.mutations :refer [mutate]]))
 
 (def ^:private form->zipper

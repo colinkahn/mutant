@@ -1,6 +1,6 @@
 (ns mutant.mutations-test
   (:require [mutant.mutations :as sut]
-            [rewrite-clj.zip :as z]
+            [mutant.zip :as z]
             [clojure.test :refer [deftest testing is are]]))
 
 
