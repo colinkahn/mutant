@@ -10,14 +10,15 @@
              [dependency :as dep]]
             [clojure.string :as str]))
 
-(defn- paths-in-zipper [zipper]
+
+(defn paths-in-zipper [zipper]
   (let [directions [z/down z/right]
-        rec (fn rec [prefix node]
-              (mapcat (fn [dir]
-                        (if-let [sub-node (dir node)]
-                          (cons (conj prefix dir)
-                                (rec (conj prefix dir) sub-node))))
-                      directions))]
+        rec        (fn rec [prefix node]
+                     (mapcat (fn [dir]
+                               (if-let [sub-node (dir node)]
+                                 (cons (conj prefix dir)
+                                       (rec (conj prefix dir) sub-node))))
+                             directions))]
     (cons [] (rec [z/down] (z/down zipper)))))
 
 
@@ -114,6 +115,7 @@
   [git-diff file]
   (->> (z/of-file file {:track-position? true})
        (iterate z/right)
+       (remove (comp #{'ns} z/sexpr))
        (remove (comp #{'ns} z/sexpr z/down))
        (take-while boolean)
        (filter (partial allow-candidate? git-diff file))))

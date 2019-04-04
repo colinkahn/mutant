@@ -1,7 +1,7 @@
 (ns mutant.zip
   "Extra zipper helpers."
   (:require [rewrite-clj.zip :as rzip])
-  (:refer-clojure :exclude [remove replace list?]))
+  (:refer-clojure :exclude [remove replace list? next]))
 
 
 (def down rzip/down)

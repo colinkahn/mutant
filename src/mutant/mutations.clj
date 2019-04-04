@@ -52,9 +52,17 @@
   [node]
   (and (-> node z/sexpr symbol?)
        (some? (-> node z/left))
-       (some? (-> node z/up z/up))
        (nil? (-> node z/left z/left))
+       (z/list? (-> node z/up))
        (nil? (-> node z/up z/up z/up))))
+
+
+(defn is-top-level-def? [node]
+  (and (-> node z/sexpr symbol?)
+       (nil? (-> node z/left))
+       (some? (-> node z/up))
+       (z/list? (-> node z/up))
+       (nil? (-> node z/up z/up))))
 
 
 (defn is-spec-keyword?
@@ -74,6 +82,9 @@
       nil
 
       (is-spec-keyword? node)
+      nil
+
+      (is-top-level-def? node)
       nil
 
       (qualified-keyword? sexpr)
@@ -126,6 +137,9 @@
       (is-spec-keyword? node)
       nil
 
+      (is-top-level-def? node)
+      nil
+
       ((some-fn symbol? keyword?) sexpr)
       [(z/replace node nil)])))
 
@@ -148,11 +162,11 @@
         (if (and (#{'defn 'defn-} defn)
                  (vector? args))
           (for [idx (drop 3 (range (count sexpr)))]
-            (-> (iterate z/right (z/down node))
-                (nth idx)
-                z/remove
-                z/up
-                z/up)))))))
+            (some-> (iterate z/right (z/down node))
+                    (nth idx)
+                    z/remove
+                    z/up
+                    z/up)))))))
 
 
 (defn rm-args [node]

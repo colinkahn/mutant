@@ -66,6 +66,16 @@
                                             `sut/ok-sentinel
                                             `sut/not-ok-sentinel]))
 
+
+(deftest t-random-rename-def-names
+  (is (empty? (->> '(defn foo [] :foo)
+                   form->zipper
+                   z/next
+                   z/next
+                   (sut/mutate-with sut/random-rename)
+                   (map zipper->form)))))
+
+
 (deftest t-swap-values
   (check sut/swap-values 42 [-42 0])
   (check sut/swap-values -42 [42 0])
