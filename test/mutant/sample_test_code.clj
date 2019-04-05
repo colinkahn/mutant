@@ -1,4 +1,4 @@
-(ns mutant.sample-test-code.clj
+(ns mutant.sample-test-code
   (:require [clojure.spec.alpha :as s]))
 
 
