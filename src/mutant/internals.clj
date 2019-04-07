@@ -8,7 +8,8 @@
              [file :as file]
              [parse :as parse]
              [dependency :as dep]]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [mutant.log :as log]))
 
 
 (defn x-remove-ns-forms []
@@ -135,30 +136,32 @@
 
 (defn run-ns
   [ns zippers dep-graph test-fn]
-  (let [cur-ns (symbol (str *ns*))
-        deps (dependants dep-graph ns)
-        forms (map z/string zippers)
-        zipped (zipmap forms zippers)]
-    (for [candidate forms
-          mutant (mutants (zipped candidate)
-                          (paths-in-zipper (zipped candidate)))]
-      (try
-        (in-ns ns)
-        (doseq [form forms]
-          (if (= form candidate)
-            (eval (read-string {:read-cond :allow} (z/string mutant)))
-            (eval (read-string {:read-cond :allow} form))))
-        (doseq [dep deps]
-          (require dep :reload))
-        (if (test-fn)
-          {:survivor {:mutant (z/string mutant)
-                      :original candidate
-                      :ns ns}}
-          {})
-        (catch Throwable ex
-          {})
-        (finally
-          (require ns :reload)
-          (doseq [dep deps]
-            (require dep :reload))
-          (in-ns cur-ns))))))
+  (let [cur-ns        (symbol (str *ns*))
+        deps          (dependants dep-graph ns)
+        form->mutants (mutate-zippers zippers)
+        forms         (keys form->mutants)
+        total         (reduce + (map count (vals form->mutants)))]
+    (lazy-seq
+     (log/info "\nTesting:\t" ns "\t(" total ")")
+     (for [[candidate mutants] form->mutants
+           mutant              mutants]
+       (try
+         (in-ns ns)
+         (doseq [form forms]
+           (if (= form candidate)
+             (eval (read-string {:read-cond :allow} (z/string mutant)))
+             (eval (read-string {:read-cond :allow} form))))
+         (doseq [dep deps]
+           (require dep :reload))
+         (if (test-fn)
+           {:survivor {:mutant   (z/string mutant)
+                       :original candidate
+                       :ns       ns}}
+           {})
+         (catch Throwable ex
+           {})
+         (finally
+           (require ns :reload)
+           (doseq [dep deps]
+             (require dep :reload))
+           (in-ns cur-ns)))))))

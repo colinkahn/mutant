@@ -4,6 +4,7 @@
            org.clojure/tools.namespace  {:mvn/version "0.3.0-alpha4"}
            org.clojure/tools.deps.alpha {:mvn/version "0.6.496"}
            jansi-clj                    {:mvn/version "0.1.1" :exclusions [org.clojure/clojure]}
+           eftest                       {:mvn/version "0.5.7" :exclusions [org.clojure/clojure org.clojure/tools.namespace]}
            rewrite-clj                  {:mvn/version "0.6.1"}}
  :aliases {:old-test {:extra-paths ["old-test"]
                       :extra-deps  {com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"

@@ -1,8 +1,8 @@
 (ns mutant.test-runner
-  (:require [clojure.tools.namespace.find :as find]
-            [clojure.tools.cli :as tools.cli]
+  (:require [clojure.tools.cli :as tools.cli]
             [mutant.core :as mutant]
-            [mutant.helpers.clojure-test :as clojure-test])
+            [mutant.tester.core :as tester]
+            [mutant.log :as log])
   (:import (java.io File))
   (:refer-clojure :exclude [test]))
 
@@ -26,18 +26,17 @@
   (flush))
 
 
-(defn require-tests
-  [{:keys [:test-paths]}]
-  (let [test-namespaces (->> test-paths
-                             (mapcat #(find/find-namespaces-in-dir (File. %))))]
-    (run! require test-namespaces)))
+(defn new-test-fn [options]
+  (let [vars (tester/find-tests (:test-paths options))]
+    #(tester/run-tests vars {:multithread?   false
+                             :test-warn-time 1000})))
 
 
 (defn run-mutation
-  [{:keys [:src-paths :git-since]}]
+  [test-fn {:keys [:src-paths :git-since]}]
   (binding [*out* *err*]
     (->> (mutant/run {:src-paths src-paths
-                      :test-fn   clojure-test/test-fn
+                      :test-fn   test-fn
                       :git-since git-since})
          (reduce report)
          final-report))
@@ -45,10 +44,10 @@
 
 
 (defn test [options]
-  (println "Running tests!")
-  (require-tests options)
-  (assert (clojure-test/test-fn {:silent? true}) "Tests are not green")
-  (run-mutation options))
+  (let [test-fn (new-test-fn options)]
+    (log/info "Running tests...")
+    (assert (test-fn) "Tests are not green!")
+    (run-mutation test-fn options)))
 
 
 (defn- accumulate [m k v]
@@ -89,6 +88,7 @@
       (if (-> args :options :test-help)
         (help args)
         (try
+          ;; TODO:
           ;; (let [{:keys [fail error]} (test (:options args))]
           ;;   (System/exit (if (zero? (+ fail error)) 0 1)))
           (test (:options args))
