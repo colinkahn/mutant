@@ -4,20 +4,20 @@ test-all: test ex-mutant
 
 ex-test:
 	cd example && \
-		clj -A:test -m cognitect.test-runner -d test
+		clj -Sforce -Srepro -A:test -m cognitect.test-runner -d test
 
 ex-mutant:
 	cd example && \
-		clj -A:test:mutant -m mutant.test-runner -t test -s src
+		clj -Sforce -Srepro -A:test:mutant -m mutant.test-runner -t test -s src
 
 test-old:
-	clj -A:old-test -m cognitect.test-runner -d old-test
+	clj -Sforce -Srepro -A:old-test -m cognitect.test-runner -d old-test
 
 test:
-	clj -A:test -m cognitect.test-runner -d test
+	clj -Sforce -Srepro -A:test -m cognitect.test-runner -d test
 
 test-watch:
-	clj -A:test -m kaocha.runner --config-file tests/test.edn --watch
+	clj -Sforce -Srepro -A:test -m kaocha.runner --config-file tests/test.edn --watch
 
 test-focus:
-	clj -A:test -m kaocha.runner --config-file tests/test.edn --watch --focus-meta focus
+	clj -Sforce -Srepro -A:test -m kaocha.runner --config-file tests/test.edn --watch --focus-meta focus
