@@ -11,6 +11,44 @@
             [clojure.string :as str]))
 
 
+(defn x-remove-ns-forms []
+  (remove (comp #{'ns} z/sexpr z/down)))
+
+
+(defn code-touches-diff?
+  [[diff-start diff-stop] def-start def-stop]
+  (let [def-stop (dec (or def-stop diff-stop))]
+    (or (<= def-start diff-start def-stop)
+        (<= def-start diff-stop def-stop)
+        (<= diff-start def-start diff-stop))))
+
+
+(defn x-keep-forms-with-lines [line-ranges]
+  (if (empty? line-ranges)
+    (map identity)
+    (filter (fn [node]
+              (let [start (-> node z/position first)
+                    stop  (some-> node z/right-no-skip-ws z/position first dec)]
+                (some #(code-touches-diff? % start stop) line-ranges))))))
+
+
+(defn file-to-zippers
+  [file {:keys [:line-ranges]}]
+  (into []
+        (comp (take-while some?)
+              (x-remove-ns-forms)
+              (x-keep-forms-with-lines line-ranges))
+        (->> (z/of-file file {:track-position? true})
+             (iterate z/right))))
+
+
+(defn dirs-to-namespaces [src-paths]
+  (let [files      (mapcat find/find-clojure-sources-in-dir
+                           (map jio/file src-paths))
+        namespaces (mapv (comp second file/read-file-ns-decl) files)]
+    (zipmap files namespaces)))
+
+
 (defn paths-in-zipper [zipper]
   (let [directions [z/down z/right]
         rec        (fn rec [prefix node]
@@ -33,20 +71,8 @@
    paths))
 
 
-(defn- file [^String name]
-  (java.io.File. name))
-
-
-(defn namespaces
-  "Returns a map from files to namespaces in a given directory."
-  [directory-name]
-  (into {}
-        (map (juxt identity (comp second file/read-file-ns-decl)))
-        (find/find-clojure-sources-in-dir (file directory-name))))
-
-
 (defn dependency-graph [directory-names]
-  (let [decls (find/find-ns-decls (map file directory-names))]
+  (let [decls (find/find-ns-decls (map jio/file directory-names))]
     (->> decls
          (map (juxt second parse/deps-from-ns-decl))
          (reduce (fn [graph [ns deps]]
@@ -82,49 +108,30 @@
                                   (mapcat #(vector [(:old-line %) (+ (:old-line %) (:old-count %))]
                                                    [(:new-line %) (+ (:new-line %) (:new-count %))]))
                                   (vec))]
-                 {file outputs}))
+                 {(jio/file file) outputs}))
              files)))
 
 
-(defn make-git-diff [git-since]
-  (when git-since
-    (candidate-lines (candidate-files git-since) git-since)))
+(defn git-diff-ranges [git-since]
+  (if git-since
+    (candidate-lines (candidate-files git-since) git-since)
+    {}))
 
-
-(defn count-lines [file]
-  (with-open [rdr (jio/reader file)]
-    (-> rdr line-seq count)))
-
-
-(defn allow-candidate? [git-diff file node]
-  (or (empty? git-diff)
-      (let [touches? (fn [[def-start def-stop] [diff-start diff-stop]]
-                       (or (<= def-start diff-start def-stop)
-                           (<= def-start diff-stop def-stop)
-                           (<= diff-start def-start diff-stop)))
-            start    (-> node (z/position) first)
-            stop     (or (and (-> node (z/right))
-                              (-> node (z/right) (z/position) first))
-                         (count-lines file))]
-        (boolean (some #(touches? [start stop] %)
-                       (get git-diff (str (.toPath file))))))))
-
-
-(defn forms
-  "Return a collection of zippers for top-level sexprs found in a given file."
-  [git-diff file]
-  (->> (z/of-file file {:track-position? true})
-       (iterate z/right)
-       (remove (comp #{'ns} z/sexpr))
-       (remove (comp #{'ns} z/sexpr z/down))
-       (take-while boolean)
-       (filter (partial allow-candidate? git-diff file))))
 
 (defn- dependants [graph ns]
   (letfn [(rec [sym]
             (if-let [deps (seq (dep/immediate-dependents graph sym))]
               (reduce into [] (conj (mapv rec deps) deps))))]
     (reverse (distinct (rec ns)))))
+
+
+(defn mutate-zippers [zippers]
+  (into {}
+        (comp (map (fn [z] [(z/string z) z]))
+              (map (fn [[form zipper]]
+                     [form (mutants zipper (paths-in-zipper zipper))])))
+        zippers))
+
 
 (defn run-ns
   [ns zippers dep-graph test-fn]

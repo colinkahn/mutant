@@ -5,20 +5,48 @@
             [clojure.test :refer [deftest testing is are]]))
 
 
-(deftest t-forms
+
+(deftest t-file-to-zippers
   (let [file (jio/file "test/mutant/sample_test_code.clj")]
     (is (= '[(defn naught? [x] (= 0 x))
-             ;; (comment (defn answer [] 43))
-             ;; (comment (defn answer [] 44))
              (defn answer [] 42 (comment (+ 0 47)))
              (s/def :user/integer int?)]
-           (->> (sut/forms nil file)
+           (->> (sut/file-to-zippers file {})
+                (map z/sexpr))))
+    (is (= '[(defn naught? [x] (= 0 x))]
+           (->> (sut/file-to-zippers file {:line-ranges [[5 5]]})
+                (map z/sexpr))))
+    (is (= '[(defn naught? [x] (= 0 x))]
+           (->> (sut/file-to-zippers file {:line-ranges [[6 6]]})
+                (map z/sexpr))))
+    (is (= '[(s/def :user/integer int?)]
+           (->> (sut/file-to-zippers file {:line-ranges [[23 23]]})
+                (map z/sexpr))))
+    (is (= '[]
+           (->> (sut/file-to-zippers file {:line-ranges [[7 15]]})
+                (map z/sexpr))))
+    (is (= '[]
+           (->> (sut/file-to-zippers file {:line-ranges [[0 3]]})
+                (map z/sexpr))))
+    (is (= '[]
+           (->> (sut/file-to-zippers file {:line-ranges [[7 15]]})
+                (map z/sexpr))))
+    (is (= '[]
+           (->> (sut/file-to-zippers file {:line-ranges [[24 24]]})
                 (map z/sexpr))))))
+
+
+(deftest t-dirs-to-namespaces
+  (is (= {(jio/file "example/src/example/colls.clj")            'example.colls
+          (jio/file "example/src/example/nums.clj")             'example.nums
+          (jio/file "example/test/example/complete_test.clj")   'example.complete-test
+          (jio/file "example/test/example/incomplete_test.clj") 'example.incomplete-test}
+         (sut/dirs-to-namespaces ["example/src" "example/test"]))))
 
 
 (deftest t-mutants
   (let [file    (jio/file "test/mutant/sample_test_code.clj")
-        zippers (sut/forms nil file)]
+        zippers (sut/file-to-zippers file {})]
     (is (= [["(defn naught? [x])"
              "(defn naught? []\n  (= 0 x))"
              "(defn naught? [nil]\n  (= 0 x))"

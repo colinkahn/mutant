@@ -52,6 +52,12 @@
   (some-> loc rzip/right (zip-skip-ws rzip/right rzip/right (constantly false))))
 
 
+(defn right-no-skip-ws
+  "Like [[rewrite-clj.zip/right]], but also skip over uneval nodes"
+  [loc]
+  (some-> loc rzip/right))
+
+
 (defn next
   "Like [[rewrite-clj.zip/next]], but also skip over uneval nodes"
   [loc]
