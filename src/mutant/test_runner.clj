@@ -33,11 +33,12 @@
 
 
 (defn run-mutation
-  [test-fn {:keys [:src-paths :git-since]}]
+  [test-fn {:keys [:src-paths :git-since :file->ranges]}]
   (binding [*out* *err*]
-    (->> (mutant/run {:src-paths src-paths
-                      :test-fn   test-fn
-                      :git-since git-since})
+    (->> (mutant/run {:src-paths    src-paths
+                      :test-fn      test-fn
+                      :git-since    git-since
+                      :file->ranges (or file->ranges {})})
          (reduce report)
          final-report))
   (shutdown-agents))
@@ -66,6 +67,12 @@
    ["-c" "--since  SHA" "Git SHA to start mutations from."
     :id       :git-since
     :parse-fn str]
+   ["-l" "--lines file,start,stop" "Line number range to include."
+    :id       :file->ranges
+    :parse-fn (fn [s]
+                (let [[file start stop] (clojure.string/split s #",")]
+                  {(File. file) [(mapv read-string [start stop])]}))
+    :assoc-fn accumulate]
    ["-H" "--test-help" "Display this help message"]])
 
 

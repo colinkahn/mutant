@@ -75,6 +75,15 @@
        (some? (-> node z/left))
        (= 's/def (-> node z/left z/sexpr))))
 
+(defn is-defmulti-dispatch?
+  [node]
+  (or (some-> node z/left z/left z/left z/sexpr #{'defmulti})
+      (some-> node z/left z/left z/sexpr #{'defmulti})
+      (some-> node z/left z/sexpr #{'defmulti})))
+
+(defn is-defmethod-dispatch?
+  [node]
+  (some-> node z/left z/left z/sexpr #{'defmethod}))
 
 (defn is-ignoreable-symbol?
   "By convention, symbols named _ or starting with _
@@ -100,7 +109,9 @@
             is-top-level-def?
             is-spec-keyword?
             is-ignoreable-symbol?
-            is-dynamic-symbol?)
+            is-dynamic-symbol?
+            is-defmulti-dispatch?
+            is-defmethod-dispatch?)
    node))
 
 
